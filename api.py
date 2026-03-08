@@ -362,6 +362,18 @@ def _safe_user(user: dict, balance: float, orders: list) -> dict:
     }
 
 
+# ===== SERVE LOGO FROM ROOT =====
+@app.route("/logo.png", methods=["GET"])
+def serve_logo():
+    import os
+    from flask import send_file
+    # ابحث عن الصورة في المجلد الرئيسي أو static
+    for path in ["logo.png", "static/logo.png", "logo.jpg", "logo.jpeg"]:
+        if os.path.exists(path):
+            return send_file(path, mimetype="image/png")
+    return "", 404
+
+
 if __name__ == "__main__":
     init_sessions()
     port = int(os.environ.get("API_PORT", 5000))
