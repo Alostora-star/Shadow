@@ -22,12 +22,15 @@ ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID", 7524378240))
 GROUP_ID = int(os.getenv("GROUP_ID", 0)) if os.getenv("GROUP_ID") else None
 GROUP_JOIN_LINK = os.getenv("GROUP_JOIN_LINK")
 
+# قناة التيليغرام للإعلانات
+CHANNEL_ID = os.getenv("CHANNEL_ID", "@shadowstoresh")
+
 # إعدادات المتجر (يمكن نقلها لاحقاً إلى قاعدة البيانات)
 WEBSITE_NAME = "متجر الخدمات الرقمية"
 WEBSITE_SLOGAN = "جودتنا تميزنا، وسرعتنا تخدمكم!"
 WEBSITE_DESCRIPTION = "نقدم لكم أفضل الخدمات الرقمية بأسعار تنافسية وجودة عالية."
 WEBSITE_MESSAGE = "اكتشف مجموعتنا الواسعة من الخدمات الرقمية المصممة لتلبية جميع احتياجاتك."
-INSTAGRAM_USERNAME = "@ZenetsuYYY"
+INSTAGRAM_USERNAME = "@zenetsuy"
 
 # إعدادات طرق الدفع
 PAYMENT_METHODS = {
@@ -38,7 +41,7 @@ PAYMENT_METHODS = {
         "instructions": "يرجى تحويل المبلغ باستخدام كود الاستلام"
     },
     "syriatel_cash_code": {
-        "name": "🔑  سيرياتيل كاش",
+        "name": "🔑 سيرياتيل كاش - رمز",
         "enabled": True,
         "code": "69643514",
         "instructions": "يرجى تحويل المبلغ المطلوب باستخدام الرمز التالي"

@@ -1,0 +1,48 @@
+# ملفات البيئة والإعدادات الحساسة
+.env
+*.env
+serviceAccountKey.json
+
+# قاعدة البيانات
+*.db
+*.sqlite
+*.sqlite3
+
+# ملفات Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# بيئات افتراضية
+venv/
+ENV/
+env/
+.venv
+
+# ملفات IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ملفات النظام
+.DS_Store
+Thumbs.db

@@ -18,9 +18,23 @@ def init_db():
             user_id INTEGER PRIMARY KEY,
             username TEXT,
             balance REAL DEFAULT 0.0,
+            currency TEXT DEFAULT 'USD',
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             last_activity TEXT DEFAULT CURRENT_TIMESTAMP
         )
+    """)
+
+    # جدول الإعدادات العامة
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    # إدراج سعر الصرف الافتراضي إن لم يكن موجوداً
+    cursor.execute("""
+        INSERT OR IGNORE INTO settings (key, value) VALUES ('usd_to_syp', '12000')
     """)
 
     # جدول معرفات الألعاب المحفوظة (ميزة جديدة)
@@ -147,6 +161,20 @@ def init_db():
         )
     """)
     
+    # جدول الكوبونات
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS coupons (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT UNIQUE NOT NULL,
+            discount_type TEXT NOT NULL,
+            discount_value REAL NOT NULL,
+            max_uses INTEGER DEFAULT 1,
+            used_count INTEGER DEFAULT 0,
+            is_active INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
     conn.commit()
     conn.close()
     logger.info("Database initialized successfully.")
@@ -698,3 +726,620 @@ async def get_purchase_by_id_db(purchase_id: str):
         keys = ["purchase_id", "user_id", "username", "product_name", "game_id", "price", "status", "timestamp", "shipped_at"]
         return dict(zip(keys, row))
     return None
+
+# --- دوال الكوبونات ---
+
+async def add_coupon_db(code: str, discount_type: str, discount_value: float, max_uses: int = 1):
+    """إضافة كوبون جديد. discount_type: 'percent' أو 'fixed'"""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "INSERT INTO coupons (code, discount_type, discount_value, max_uses) VALUES (?, ?, ?, ?)",
+            (code.upper(), discount_type, discount_value, max_uses)
+        )
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
+    finally:
+        conn.close()
+
+async def get_coupon_db(code: str):
+    """جلب كوبون بالكود."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM coupons WHERE code = ? AND is_active = 1", (code.upper(),))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        keys = ["id", "code", "discount_type", "discount_value", "max_uses", "used_count", "is_active", "created_at"]
+        return dict(zip(keys, row))
+    return None
+
+async def use_coupon_db(code: str):
+    """تسجيل استخدام كوبون وتعطيله إن استنفد."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE coupons SET used_count = used_count + 1 WHERE code = ?", (code.upper(),))
+    cursor.execute("UPDATE coupons SET is_active = 0 WHERE code = ? AND used_count >= max_uses", (code.upper(),))
+    conn.commit()
+    conn.close()
+
+async def get_all_coupons_db():
+    """جلب جميع الكوبونات."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM coupons ORDER BY created_at DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    keys = ["id", "code", "discount_type", "discount_value", "max_uses", "used_count", "is_active", "created_at"]
+    return [dict(zip(keys, r)) for r in rows]
+
+async def delete_coupon_db(code: str):
+    """حذف كوبون."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM coupons WHERE code = ?", (code.upper(),))
+    conn.commit()
+    conn.close()
+
+
+# --- دوال إحصائيات متقدمة ---
+
+async def get_total_revenue_db() -> float:
+    """إجمالي الإيرادات من المشتريات المكتملة."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT COALESCE(SUM(price), 0) FROM purchases_history WHERE status IN ('Shipped','shipped','completed')")
+    result = cursor.fetchone()[0]
+    conn.close()
+    return float(result)
+
+async def get_total_orders_db() -> int:
+    """إجمالي عدد الطلبات."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM purchases_history")
+    result = cursor.fetchone()[0]
+    conn.close()
+    return result
+
+async def get_pending_orders_db():
+    """جلب الطلبات المعلقة."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT * FROM purchases_history WHERE status IN ('pending_shipment','pending') ORDER BY timestamp DESC"
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    keys = ["purchase_id","user_id","username","product_name","game_id","price","status","timestamp","shipped_at"]
+    return [dict(zip(keys, r)) for r in rows]
+
+async def get_pending_deposits_db():
+    """جلب طلبات الإيداع المعلقة."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM pending_payments WHERE status = 'pending' ORDER BY timestamp DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    keys = ["payment_id","user_id","username","amount","transaction_id","payment_method","status","timestamp"]
+    return [dict(zip(keys, r)) for r in rows]
+
+async def get_top_products_db(limit: int = 5):
+    """أكثر المنتجات مبيعاً."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT product_name, COUNT(*) as cnt, SUM(price) as revenue FROM purchases_history GROUP BY product_name ORDER BY cnt DESC LIMIT ?",
+        (limit,)
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return [{"product_name": r[0], "count": r[1], "revenue": r[2]} for r in rows]
+
+async def get_user_info_db(user_id: int):
+    """جلب معلومات مستخدم."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        keys = ["user_id","username","balance","created_at","last_activity"]
+        return dict(zip(keys, row))
+    return None
+
+async def set_user_balance_db(user_id: int, new_balance: float):
+    """تعيين رصيد مستخدم مباشرة."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET balance = ? WHERE user_id = ?", (new_balance, user_id))
+    conn.commit()
+    conn.close()
+
+async def get_revenue_today_db() -> float:
+    """إيرادات اليوم."""
+    from datetime import date
+    today = str(date.today())
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT COALESCE(SUM(price), 0) FROM purchases_history WHERE status IN ('Shipped','shipped','completed') AND timestamp LIKE ?",
+        (today + '%',)
+    )
+    result = cursor.fetchone()[0]
+    conn.close()
+    return float(result)
+
+# --- دوال العملات ---
+
+async def get_exchange_rate_db() -> float:
+    """جلب سعر صرف الدولار إلى الليرة السورية."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT value FROM settings WHERE key = 'usd_to_syp'")
+    row = cursor.fetchone()
+    conn.close()
+    return float(row[0]) if row else 12000.0
+
+async def set_exchange_rate_db(rate: float):
+    """تحديث سعر الصرف."""
+    from datetime import datetime
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES ('usd_to_syp', ?, ?)",
+        (str(rate), datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    )
+    conn.commit()
+    conn.close()
+
+async def get_user_currency_db(user_id: int) -> str:
+    """جلب عملة المستخدم المفضّلة."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT currency FROM users WHERE user_id = ?", (user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if row and row[0]:
+        return row[0]
+    return 'USD'
+
+async def set_user_currency_db(user_id: int, currency: str):
+    """تعيين عملة المستخدم."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    # تأكد من وجود المستخدم أولاً
+    cursor.execute(
+        "INSERT OR IGNORE INTO users (user_id, currency) VALUES (?, ?)",
+        (user_id, currency)
+    )
+    cursor.execute(
+        "UPDATE users SET currency = ? WHERE user_id = ?",
+        (currency, user_id)
+    )
+    conn.commit()
+    conn.close()
+
+# --- دوال الإحالة ---
+
+async def init_referral_tables():
+    """إنشاء جداول الإحالة والعروض إن لم تكن موجودة."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS referrals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            referrer_id INTEGER NOT NULL,
+            referred_id INTEGER NOT NULL UNIQUE,
+            reward_paid INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS flash_offers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_id TEXT NOT NULL,
+            discounted_price REAL NOT NULL,
+            original_price REAL NOT NULL,
+            expires_at TEXT NOT NULL,
+            is_active INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        INSERT OR IGNORE INTO settings (key, value) VALUES ('referral_reward', '0.50')
+    """)
+    conn.commit()
+    conn.close()
+
+async def add_referral_db(referrer_id: int, referred_id: int) -> bool:
+    """تسجيل إحالة جديدة. يعيد True إذا نجح."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "INSERT INTO referrals (referrer_id, referred_id) VALUES (?, ?)",
+            (referrer_id, referred_id)
+        )
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
+    finally:
+        conn.close()
+
+async def get_referral_stats_db(user_id: int) -> dict:
+    """إحصائيات الإحالة لمستخدم."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM referrals WHERE referrer_id = ?", (user_id,))
+    total = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM referrals WHERE referrer_id = ? AND reward_paid = 1", (user_id,))
+    paid = cursor.fetchone()[0]
+    conn.close()
+    return {"total": total, "paid": paid}
+
+async def mark_referral_rewarded_db(referred_id: int):
+    """تحديد الإحالة كمدفوعة."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE referrals SET reward_paid = 1 WHERE referred_id = ?",
+        (referred_id,)
+    )
+    conn.commit()
+    conn.close()
+
+async def get_referrer_db(referred_id: int):
+    """جلب المُحيل لمستخدم معين."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT referrer_id FROM referrals WHERE referred_id = ? AND reward_paid = 0",
+        (referred_id,)
+    )
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row else None
+
+async def get_referral_reward_db() -> float:
+    """جلب قيمة مكافأة الإحالة."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT value FROM settings WHERE key = 'referral_reward'")
+    row = cursor.fetchone()
+    conn.close()
+    return float(row[0]) if row else 0.5
+
+async def set_referral_reward_db(amount: float):
+    """تحديث قيمة مكافأة الإحالة."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES ('referral_reward', ?)",
+        (str(amount),)
+    )
+    conn.commit()
+    conn.close()
+
+# --- دوال العروض المحدودة ---
+
+async def add_flash_offer_db(product_id: str, discounted_price: float, original_price: float, expires_at: str) -> int:
+    """إضافة عرض محدود الوقت."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO flash_offers (product_id, discounted_price, original_price, expires_at) VALUES (?, ?, ?, ?)",
+        (product_id, discounted_price, original_price, expires_at)
+    )
+    offer_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return offer_id
+
+async def get_active_flash_offers_db() -> list:
+    """جلب العروض النشطة وغير المنتهية."""
+    from datetime import datetime
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT * FROM flash_offers WHERE is_active = 1 AND expires_at > ? ORDER BY expires_at ASC",
+        (now,)
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    keys = ["id","product_id","discounted_price","original_price","expires_at","is_active","created_at"]
+    return [dict(zip(keys, r)) for r in rows]
+
+async def get_flash_offer_by_product_db(product_id: str) -> dict:
+    """جلب عرض نشط لمنتج معين."""
+    from datetime import datetime
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT * FROM flash_offers WHERE product_id = ? AND is_active = 1 AND expires_at > ? LIMIT 1",
+        (product_id, now)
+    )
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        keys = ["id","product_id","discounted_price","original_price","expires_at","is_active","created_at"]
+        return dict(zip(keys, row))
+    return None
+
+async def deactivate_flash_offer_db(offer_id: int):
+    """إلغاء عرض."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE flash_offers SET is_active = 0 WHERE id = ?", (offer_id,))
+    conn.commit()
+    conn.close()
+
+# --- دوال دعم العملاء ---
+
+async def init_support_table():
+    """إنشاء جدول التذاكر."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS support_tickets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            username TEXT,
+            subject TEXT NOT NULL,
+            status TEXT DEFAULT 'open',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS support_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticket_id INTEGER NOT NULL,
+            sender TEXT NOT NULL,
+            message TEXT NOT NULL,
+            sent_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (ticket_id) REFERENCES support_tickets(id)
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+async def create_ticket_db(user_id: int, username: str, subject: str) -> int:
+    """إنشاء تذكرة جديدة، يعيد ticket_id."""
+    from datetime import datetime
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO support_tickets (user_id, username, subject, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+        (user_id, username, subject, now, now)
+    )
+    ticket_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return ticket_id
+
+async def add_ticket_message_db(ticket_id: int, sender: str, message: str):
+    """إضافة رسالة لتذكرة."""
+    from datetime import datetime
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO support_messages (ticket_id, sender, message, sent_at) VALUES (?, ?, ?, ?)",
+        (ticket_id, sender, message, now)
+    )
+    cursor.execute(
+        "UPDATE support_tickets SET updated_at = ?, status = CASE WHEN status = 'closed' THEN 'open' ELSE status END WHERE id = ?",
+        (now, ticket_id)
+    )
+    conn.commit()
+    conn.close()
+
+async def get_user_tickets_db(user_id: int) -> list:
+    """جلب تذاكر مستخدم."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT * FROM support_tickets WHERE user_id = ? ORDER BY updated_at DESC",
+        (user_id,)
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    keys = ["id", "user_id", "username", "subject", "status", "created_at", "updated_at"]
+    return [dict(zip(keys, r)) for r in rows]
+
+async def get_ticket_messages_db(ticket_id: int) -> list:
+    """جلب رسائل تذكرة."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT * FROM support_messages WHERE ticket_id = ? ORDER BY sent_at ASC",
+        (ticket_id,)
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    keys = ["id", "ticket_id", "sender", "message", "sent_at"]
+    return [dict(zip(keys, r)) for r in rows]
+
+async def get_ticket_by_id_db(ticket_id: int) -> dict:
+    """جلب تذكرة بالـ ID."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM support_tickets WHERE id = ?", (ticket_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        keys = ["id", "user_id", "username", "subject", "status", "created_at", "updated_at"]
+        return dict(zip(keys, row))
+    return None
+
+async def get_open_tickets_db() -> list:
+    """جلب جميع التذاكر المفتوحة للأدمن."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT * FROM support_tickets WHERE status != 'closed' ORDER BY updated_at DESC"
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    keys = ["id", "user_id", "username", "subject", "status", "created_at", "updated_at"]
+    return [dict(zip(keys, r)) for r in rows]
+
+async def close_ticket_db(ticket_id: int):
+    """إغلاق تذكرة."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE support_tickets SET status = 'closed' WHERE id = ?", (ticket_id,))
+    conn.commit()
+    conn.close()
+
+# --- دوال الاسترداد ---
+
+async def request_refund_db(purchase_id: str, user_id: int, reason: str) -> bool:
+    """طلب استرداد."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS refund_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                purchase_id TEXT NOT NULL,
+                user_id INTEGER NOT NULL,
+                reason TEXT,
+                status TEXT DEFAULT 'pending',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cursor.execute(
+            "INSERT INTO refund_requests (purchase_id, user_id, reason) VALUES (?, ?, ?)",
+            (purchase_id, user_id, reason)
+        )
+        cursor.execute(
+            "UPDATE purchases_history SET status = 'refund_requested' WHERE purchase_id = ? AND user_id = ?",
+            (purchase_id, user_id)
+        )
+        conn.commit()
+        return True
+    except Exception:
+        return False
+    finally:
+        conn.close()
+
+async def get_pending_refunds_db() -> list:
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS refund_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                purchase_id TEXT NOT NULL,
+                user_id INTEGER NOT NULL,
+                reason TEXT,
+                status TEXT DEFAULT 'pending',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cursor.execute(
+            "SELECT r.*, p.product_name, p.price, p.username FROM refund_requests r "
+            "JOIN purchases_history p ON r.purchase_id = p.purchase_id "
+            "WHERE r.status = 'pending' ORDER BY r.created_at DESC"
+        )
+        rows = cursor.fetchall()
+        keys = ["id","purchase_id","user_id","reason","status","created_at","product_name","price","username"]
+        return [dict(zip(keys, r)) for r in rows]
+    finally:
+        conn.close()
+
+async def process_refund_db(purchase_id: str, approve: bool) -> dict:
+    """معالجة طلب الاسترداد. يعيد بيانات المستخدم والمبلغ."""
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM purchases_history WHERE purchase_id = ?", (purchase_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return {}
+    keys = ["purchase_id","user_id","username","product_name","game_id","price","status","timestamp","shipped_at"]
+    purchase = dict(zip(keys, row))
+    if approve:
+        cursor.execute(
+            "UPDATE users SET balance = balance + ? WHERE user_id = ?",
+            (purchase['price'], purchase['user_id'])
+        )
+        cursor.execute(
+            "UPDATE purchases_history SET status = 'refunded' WHERE purchase_id = ?",
+            (purchase_id,)
+        )
+        cursor.execute(
+            "UPDATE refund_requests SET status = 'approved' WHERE purchase_id = ?",
+            (purchase_id,)
+        )
+    else:
+        cursor.execute(
+            "UPDATE purchases_history SET status = 'Shipped' WHERE purchase_id = ?",
+            (purchase_id,)
+        )
+        cursor.execute(
+            "UPDATE refund_requests SET status = 'rejected' WHERE purchase_id = ?",
+            (purchase_id,)
+        )
+    conn.commit()
+    conn.close()
+    return purchase
+
+# --- دوال اللغة ---
+
+async def get_user_language_db(user_id: int) -> str:
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN language TEXT DEFAULT 'ar'")
+        conn.commit()
+    except Exception:
+        pass
+    cursor.execute("SELECT language FROM users WHERE user_id = ?", (user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return (row[0] or 'ar') if row else 'ar'
+
+async def set_user_language_db(user_id: int, lang: str):
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute("INSERT OR IGNORE INTO users (user_id, language) VALUES (?, ?)", (user_id, lang))
+    cursor.execute("UPDATE users SET language = ? WHERE user_id = ?", (lang, user_id))
+    conn.commit()
+    conn.close()
+
+# --- دوال التحقق بخطوتين ---
+
+async def set_user_2fa_db(user_id: int, enabled: bool):
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN two_fa INTEGER DEFAULT 0")
+        conn.commit()
+    except Exception:
+        pass
+    cursor.execute("UPDATE users SET two_fa = ? WHERE user_id = ?", (1 if enabled else 0, user_id))
+    conn.commit()
+    conn.close()
+
+async def get_user_2fa_db(user_id: int) -> bool:
+    conn = sqlite3.connect(DATABASE_NAME)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN two_fa INTEGER DEFAULT 0")
+        conn.commit()
+    except Exception:
+        pass
+    cursor.execute("SELECT two_fa FROM users WHERE user_id = ?", (user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return bool(row[0]) if row else False

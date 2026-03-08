@@ -50,12 +50,23 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         return
 
     keyboard = [
-        [InlineKeyboardButton("➕ إضافة فئة", callback_data="admin_add_category")],
-        [InlineKeyboardButton("📋 عرض الفئات", callback_data="admin_list_categories")],
-        [InlineKeyboardButton("➕ إضافة منتج", callback_data="admin_add_product_start")],
-        [InlineKeyboardButton("📦 عرض المنتجات", callback_data="admin_list_products")],
-        [InlineKeyboardButton("✏️ تعديل منتج", callback_data="admin_edit_product_start")],
-        [InlineKeyboardButton("🗑️ حذف منتج", callback_data="admin_delete_product_start")],
+        [InlineKeyboardButton("📊 الإحصائيات", callback_data="admin_stats")],
+        [InlineKeyboardButton("⏳ الطلبات المعلقة", callback_data="admin_pending_orders"),
+         InlineKeyboardButton("💳 الإيداعات", callback_data="admin_pending_deposits")],
+        [InlineKeyboardButton("➕ إضافة فئة", callback_data="admin_add_category"),
+         InlineKeyboardButton("📋 الفئات", callback_data="admin_list_categories")],
+        [InlineKeyboardButton("➕ إضافة منتج", callback_data="admin_add_product_start"),
+         InlineKeyboardButton("📦 المنتجات", callback_data="admin_list_products")],
+        [InlineKeyboardButton("✏️ تعديل منتج", callback_data="admin_edit_product_start"),
+         InlineKeyboardButton("🗑️ حذف منتج", callback_data="admin_delete_product_start")],
+        [InlineKeyboardButton("🎟️ الكوبونات", callback_data="admin_coupons"),
+         InlineKeyboardButton("💰 تعديل رصيد", callback_data="admin_set_balance")],
+        [InlineKeyboardButton("👤 بحث مستخدم", callback_data="admin_search_user")],
+        [InlineKeyboardButton("💱 سعر الصرف", callback_data="admin_set_rate"),
+         InlineKeyboardButton("⚡ العروض", callback_data="admin_flash_offers")],
+        [InlineKeyboardButton("🎁 مكافأة الإحالة", callback_data="admin_ref_reward")],
+        [InlineKeyboardButton("📢 نشر إعلان", callback_data="admin_announce_prompt")],
+        [InlineKeyboardButton("🎫 تذاكر الدعم", callback_data="admin_support")],
         [InlineKeyboardButton("🔙 رجوع", callback_data="main_menu")]
     ]
 
