@@ -1,9 +1,58 @@
 # database.py
-import sqlite3
+import os
 import logging
 from datetime import datetime, timedelta
 import uuid
-from config import DATABASE_NAME
+
+# ===== DATABASE BACKEND =====
+# إذا كان DATABASE_URL موجوداً يستخدم PostgreSQL، وإلا SQLite
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
+
+if DATABASE_URL:
+    import psycopg2
+    import psycopg2.extras
+
+    def sqlite3_connect(name=None):
+        """محاكاة sqlite3.connect باستخدام psycopg2"""
+        conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+        conn.autocommit = False
+        return conn
+
+    class FakeModule:
+        """محاكاة وحدة sqlite3"""
+        connect = staticmethod(sqlite3_connect)
+        class Row: pass
+        OperationalError = psycopg2.OperationalError
+        IntegrityError = psycopg2.IntegrityError
+
+    import sqlite3 as _sqlite3_orig
+    sqlite3 = FakeModule()
+
+    # تعديل الـ placeholders من ? إلى %s
+    def _fix_query(q):
+        return q.replace("?", "%s")
+
+    # نعيد تعريف connect لتصحيح الـ queries تلقائياً
+    _orig_connect = sqlite3_connect
+    def _pg_connect(name=None):
+        conn = _orig_connect(name)
+        orig_execute = conn.cursor().__class__.execute
+        class PatchedCursor(psycopg2.extras.RealDictCursor):
+            def execute(self, query, params=None):
+                return super().execute(_fix_query(query), params)
+            def executemany(self, query, params=None):
+                return super().executemany(_fix_query(query), params)
+        conn2 = psycopg2.connect(DATABASE_URL, cursor_factory=PatchedCursor)
+        conn2.autocommit = False
+        return conn2
+    sqlite3.connect = staticmethod(_pg_connect)
+
+    DATABASE_NAME = DATABASE_URL
+    print("✅ PostgreSQL mode (Supabase)")
+else:
+    import sqlite3
+    from config import DATABASE_NAME
+    print("⚠️ SQLite mode (local)")
 
 logger = logging.getLogger(__name__)
 

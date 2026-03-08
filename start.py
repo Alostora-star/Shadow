@@ -1,4 +1,4 @@
-# start.py — يشغل البوت والـ API معاً + keep-alive
+# start.py — يشغل البوت والـ API معاً
 import asyncio
 import threading
 import os
@@ -8,26 +8,24 @@ import requests
 RENDER_URL = "https://shadow-3nyz.onrender.com"
 
 def keep_alive():
-    """يرسل ping كل 10 دقائق لإبقاء السيرفر مستيقظاً"""
-    time.sleep(30)  # انتظر 30 ثانية بعد البدء
+    time.sleep(30)
     while True:
         try:
             requests.get(f"{RENDER_URL}/api/health", timeout=10)
-            print("✅ Keep-alive ping sent")
+            print("✅ Keep-alive ping")
         except Exception as e:
-            print(f"⚠️ Keep-alive failed: {e}")
-        time.sleep(600)  # كل 10 دقائق
+            print(f"⚠️ Keep-alive: {e}")
+        time.sleep(600)
 
 def run_api():
-    """تشغيل Flask API في thread منفصل"""
-    from api import app, init_sessions
-    init_sessions()
+    from api import app
+    from pg_db import init_web_tables
+    init_web_tables()
     port = int(os.environ.get("PORT", 5000))
-    print(f"🌐 API يعمل على المنفذ {port}")
+    print(f"🌐 API على المنفذ {port}")
     app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
 
 def run_bot():
-    """تشغيل البوت مع event loop جديد"""
     from bot import main, _init
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -35,13 +33,6 @@ def run_bot():
     main()
 
 if __name__ == "__main__":
-    # Keep-alive thread
-    ka_thread = threading.Thread(target=keep_alive, daemon=True)
-    ka_thread.start()
-
-    # API thread
-    api_thread = threading.Thread(target=run_api, daemon=True)
-    api_thread.start()
-
-    # البوت في المقدمة
+    threading.Thread(target=keep_alive, daemon=True).start()
+    threading.Thread(target=run_api, daemon=True).start()
     run_bot()
