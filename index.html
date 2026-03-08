@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Shadow Store — متجر الألعاب</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#070810;--bg2:#0d0f1e;--bg3:#131629;--card:#161928;
+  --border:#1f2540;--accent:#1a8cff;--accent2:#ff4d6d;
+  --accent3:#00d4aa;--gold:#ffd700;--text:#e8eaf6;--text2:#8b8fa8;
+  --api:https://shadow-3nyz.onrender.com;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+img{object-fit:cover}
+
+/* SCREENS */
+.screen{display:none;min-height:100vh;flex-direction:column}
+.screen.active{display:flex}
+
+/* ========= SPLASH ========= */
+#splash{justify-content:center;align-items:center;
+  background:radial-gradient(ellipse at center,#0d1f3c 0%,#070810 70%)}
+.sp{text-align:center;animation:fadeIn .8s ease}
+.sp-logo{width:160px;height:160px;border-radius:50%;margin:0 auto 20px;
+  display:flex;align-items:center;justify-content:center;
+  animation:float 2.5s ease-in-out infinite;
+  box-shadow:0 0 60px rgba(26,140,255,.4),0 0 120px rgba(26,140,255,.15)}
+.sp-logo img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.sp h1{font-family:'Rajdhani',sans-serif;font-size:36px;font-weight:700;
+  letter-spacing:3px;color:#fff}
+.sp p{color:var(--accent);font-size:12px;letter-spacing:4px;margin-top:4px}
+.sp-bar{width:180px;height:3px;background:var(--border);border-radius:99px;
+  margin:28px auto 0;overflow:hidden}
+.sp-fill{height:100%;background:linear-gradient(90deg,var(--accent),#0af);
+  animation:loadBar 2.5s ease forwards}
+
+/* ========= AUTH ========= */
+#auth{justify-content:center;align-items:center;padding:20px;
+  background:radial-gradient(ellipse at top,#0b1830 0%,#070810 60%)}
+.au{width:100%;max-width:400px;animation:slideUp .4s ease}
+.au-logo{text-align:center;margin-bottom:22px}
+.au-logo img{width:70px;height:70px;border-radius:50%;
+  box-shadow:0 0 30px rgba(26,140,255,.5);margin-bottom:10px}
+.au-logo h2{font-size:22px;font-weight:900}
+.au-logo p{color:var(--text2);font-size:12px;margin-top:3px}
+.au-card{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:24px 20px}
+.tabs{display:flex;background:var(--bg2);border-radius:12px;padding:4px;margin-bottom:20px}
+.tab{flex:1;padding:10px;text-align:center;border-radius:10px;cursor:pointer;
+  font-size:13px;font-weight:700;color:var(--text2);transition:all .25s;font-family:'Cairo',sans-serif}
+.tab.on{background:var(--accent);color:#fff}
+.fg{margin-bottom:13px}
+.fl{font-size:12px;color:var(--text2);margin-bottom:5px;display:block}
+.fi{width:100%;padding:12px 14px;background:var(--bg2);border:1.5px solid var(--border);
+  border-radius:11px;color:var(--text);font-size:14px;font-family:'Cairo',sans-serif;
+  outline:none;transition:border-color .25s;direction:ltr}
+.fi:focus{border-color:var(--accent)}
+.fi.ar{direction:rtl}
+.fi-w{position:relative}.fi-w .fi{padding-left:44px}
+.fi-w .fii{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:17px;pointer-events:none}
+.btn{width:100%;padding:13px;border:none;border-radius:11px;color:#fff;font-size:14px;font-weight:700;
+  font-family:'Cairo',sans-serif;cursor:pointer;transition:transform .15s,box-shadow .2s}
+.btn:active{transform:scale(.97)}
+.btn-a{background:linear-gradient(135deg,var(--accent),#0af)}
+.btn-a:hover{box-shadow:0 8px 24px rgba(26,140,255,.4)}
+.btn-tg{background:#0088cc;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px}
+.divider{text-align:center;color:var(--text2);font-size:12px;margin:12px 0;position:relative}
+.divider::before,.divider::after{content:'';position:absolute;top:50%;width:42%;height:1px;background:var(--border)}
+.divider::before{right:0}.divider::after{left:0}
+.err{color:var(--accent2);font-size:12px;margin-top:7px;display:none;
+  text-align:center;background:rgba(255,77,109,.1);padding:8px 12px;border-radius:8px}
+
+/* ========= APP ========= */
+.header{position:sticky;top:0;z-index:100;background:rgba(7,8,16,.96);
+  backdrop-filter:blur(20px);border-bottom:1px solid var(--border);
+  padding:10px 14px;display:flex;align-items:center;justify-content:space-between}
+.hlogo{display:flex;align-items:center;gap:10px}
+.hlogo img{width:36px;height:36px;border-radius:50%;box-shadow:0 0 12px rgba(26,140,255,.5)}
+.hlogo span{font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;color:#fff;letter-spacing:1px}
+.hlogo span b{color:var(--accent)}
+.hbtns{display:flex;gap:8px}
+.hbtn{width:36px;height:36px;border-radius:9px;background:var(--bg3);
+  border:1px solid var(--border);display:flex;align-items:center;
+  justify-content:center;cursor:pointer;font-size:17px;transition:border-color .2s}
+.hbtn:hover{border-color:var(--accent)}
+.content{padding:14px;padding-bottom:96px;flex:1}
+.bnav{position:fixed;bottom:0;left:0;right:0;z-index:100;
+  background:rgba(13,15,30,.97);backdrop-filter:blur(20px);
+  border-top:1px solid var(--border);display:flex;padding:6px 0 18px}
+.ni{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  cursor:pointer;padding:7px 0;color:var(--text2);font-size:10px;transition:all .25s}
+.ni .ico{font-size:21px;transition:transform .25s}
+.ni.on{color:var(--accent)}.ni.on .ico{transform:scale(1.2)}
+.page{display:none}.page.on{display:block}
+
+/* HERO */
+.hero{background:linear-gradient(135deg,#081830,#0a1f3a 50%,#070d18);
+  border-radius:18px;padding:22px;margin-bottom:18px;position:relative;
+  overflow:hidden;border:1px solid rgba(26,140,255,.2)}
+.hero::before{content:'';position:absolute;top:-40%;right:-15%;width:300px;height:300px;
+  background:radial-gradient(circle,rgba(26,140,255,.12),transparent 70%);pointer-events:none}
+.hero-tag{display:inline-flex;align-items:center;gap:5px;background:rgba(26,140,255,.15);
+  border:1px solid rgba(26,140,255,.3);border-radius:99px;padding:3px 11px;
+  font-size:11px;color:var(--accent);margin-bottom:9px}
+.hero h2{font-size:24px;font-weight:900;line-height:1.3;margin-bottom:6px}
+.hero h2 span{color:var(--accent)}
+.hero p{color:var(--text2);font-size:12px;margin-bottom:16px}
+.hero-btns{display:flex;gap:9px}
+.hb2{padding:10px 16px;border-radius:11px;font-size:13px;font-weight:700;
+  font-family:'Cairo',sans-serif;cursor:pointer;border:none;transition:transform .15s}
+.hb2:active{transform:scale(.97)}
+.hb2.pr{background:var(--accent);color:#fff}
+.hb2.se{background:transparent;border:1px solid var(--border);color:var(--text)}
+.hero-img{position:absolute;left:-10px;top:50%;transform:translateY(-50%);
+  width:110px;height:110px;opacity:.2;border-radius:50%;object-fit:cover}
+
+/* WELCOME CHIP */
+.wchip{background:var(--card);border:1px solid var(--border);border-radius:13px;
+  padding:12px 14px;margin-bottom:18px;display:flex;align-items:center;gap:11px}
+.wc-av{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#0af);
+  display:flex;align-items:center;justify-content:center;font-size:19px;
+  font-weight:900;color:#fff;flex-shrink:0;overflow:hidden}
+.wc-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.wc-n{font-size:14px;font-weight:700}
+.wc-b{font-size:12px;color:var(--text2)}
+.wc-b span{color:var(--accent3);font-weight:700}
+
+/* SECTION */
+.sec{margin-bottom:20px}
+.sec-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.sec-t{font-size:15px;font-weight:700}
+.sec-m{color:var(--accent);font-size:12px;cursor:pointer}
+
+/* GAMES GRID */
+.ggrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.gc{background:var(--card);border:1px solid var(--border);border-radius:13px;
+  overflow:hidden;cursor:pointer;transition:all .2s;position:relative}
+.gc:active{transform:scale(.95);border-color:var(--accent)}
+.gc-img{width:100%;height:80px;object-fit:cover;display:block;
+  background:var(--bg3)}
+.gc-img-placeholder{width:100%;height:80px;display:flex;align-items:center;
+  justify-content:center;font-size:30px;background:linear-gradient(135deg,var(--bg2),var(--bg3))}
+.gc-info{padding:8px 6px}
+.gc-n{font-size:10px;font-weight:700;text-align:center}
+.gc-p{font-size:9px;color:var(--accent3);text-align:center;margin-top:2px}
+
+/* OFFERS SCROLL */
+.oscr{display:flex;gap:11px;overflow-x:auto;padding-bottom:8px;scrollbar-width:none}
+.oscr::-webkit-scrollbar{display:none}
+.oc{min-width:148px;background:var(--card);border:1px solid var(--border);
+  border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .2s;position:relative}
+.oc:active{transform:scale(.97)}
+.oc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.oc-img{width:100%;height:75px;object-fit:cover;background:var(--bg3)}
+.oc-body{padding:10px}
+.oc-badge{display:inline-block;background:var(--accent2);color:#fff;
+  font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px;margin-bottom:6px}
+.oc-n{font-size:12px;font-weight:700;margin-bottom:3px}
+.oc-old{font-size:10px;color:var(--text2);text-decoration:line-through}
+.oc-nw{font-size:15px;font-weight:900;color:var(--accent3)}
+
+/* PRODUCTS */
+.plist{display:flex;flex-direction:column;gap:8px}
+.pi{background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:12px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color .2s}
+.pi:active{border-color:var(--accent)}
+.pi-img{width:48px;height:48px;border-radius:10px;object-fit:cover;background:var(--bg3);flex-shrink:0}
+.pi-img-ph{width:48px;height:48px;border-radius:10px;background:var(--bg3);
+  display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0}
+.pi-n{font-size:13px;font-weight:700}
+.pi-d{font-size:11px;color:var(--text2);margin-top:2px}
+.pi-p{font-size:15px;font-weight:900;color:var(--accent3);white-space:nowrap}
+
+/* WALLET */
+.wcard{background:linear-gradient(135deg,#081830,#0a1f3a);
+  border:1px solid rgba(26,140,255,.35);border-radius:20px;
+  padding:24px 20px;margin-bottom:18px;position:relative;overflow:hidden;text-align:center}
+.wcard::before{content:'';position:absolute;top:-50px;right:-50px;width:180px;height:180px;
+  background:radial-gradient(circle,rgba(26,140,255,.2),transparent 70%)}
+.wcard::after{content:'';position:absolute;bottom:-50px;left:-50px;width:180px;height:180px;
+  background:radial-gradient(circle,rgba(0,212,170,.1),transparent 70%)}
+.wlbl{color:var(--text2);font-size:12px;margin-bottom:5px;position:relative;z-index:1}
+.wamt{font-size:44px;font-weight:900;color:#fff;position:relative;z-index:1}
+.wamt span{font-size:18px;color:var(--accent3)}
+.wsyp{font-size:12px;color:var(--text2);margin-top:4px;position:relative;z-index:1}
+.wacts{display:flex;gap:9px;margin-top:16px;position:relative;z-index:1}
+.wb{flex:1;padding:11px;border-radius:11px;font-size:13px;font-weight:700;
+  font-family:'Cairo',sans-serif;cursor:pointer;border:none;transition:transform .15s}
+.wb:active{transform:scale(.97)}
+.wb.dep{background:var(--accent);color:#fff}
+.wb.hist{background:var(--bg3);color:var(--text);border:1px solid var(--border)}
+
+/* TRANSACTIONS */
+.tx{background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:11px}
+.tx-ico{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;
+  justify-content:center;font-size:19px;flex-shrink:0}
+.tx-ico.plus{background:rgba(0,212,170,.15)}
+.tx-ico.minus{background:rgba(255,77,109,.15)}
+.tx-inf{flex:1}
+.tx-t{font-size:13px;font-weight:700}
+.tx-d{font-size:10px;color:var(--text2);margin-top:2px}
+.tx-a{font-size:15px;font-weight:900;white-space:nowrap}
+.tx-a.plus{color:var(--accent3)}.tx-a.minus{color:var(--accent2)}
+
+/* PROFILE */
+.ph{text-align:center;padding:18px 0 20px}
+.av{width:80px;height:80px;border-radius:50%;margin:0 auto 12px;
+  background:linear-gradient(135deg,var(--accent),#0af);
+  display:flex;align-items:center;justify-content:center;
+  font-size:32px;font-weight:900;color:#fff;
+  border:3px solid rgba(26,140,255,.4);
+  overflow:hidden;cursor:pointer;position:relative}
+.av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.av-edit{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.6);
+  font-size:10px;padding:3px;text-align:center}
+.pn{font-size:21px;font-weight:900}
+.ps{color:var(--text2);font-size:12px;margin-top:3px}
+.pbadge{display:inline-flex;align-items:center;gap:4px;background:rgba(255,215,0,.12);
+  border:1px solid rgba(255,215,0,.3);border-radius:99px;padding:3px 11px;
+  color:var(--gold);font-size:11px;font-weight:700;margin-top:7px}
+.s3g{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px}
+.s3{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center}
+.s3v{font-size:18px;font-weight:900;color:var(--accent)}
+.s3l{font-size:10px;color:var(--text2);margin-top:3px}
+.mlist{display:flex;flex-direction:column;gap:7px}
+.mi{background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color .2s}
+.mi:active{border-color:var(--accent)}
+.mi .mico{font-size:21px;min-width:28px;text-align:center}
+.mi .mtx{flex:1}
+.mi .mt{font-size:13px;font-weight:700}
+.mi .ms{font-size:11px;color:var(--text2);margin-top:2px}
+.mi .mar{color:var(--text2);font-size:15px}
+.mi.dng .mt{color:var(--accent2)}
+/* TG linked badge */
+.tg-linked{display:inline-flex;align-items:center;gap:5px;
+  background:rgba(0,136,204,.15);border:1px solid rgba(0,136,204,.3);
+  border-radius:99px;padding:3px 10px;font-size:11px;color:#0af;margin-top:6px}
+
+/* ORDERS */
+.olist{display:flex;flex-direction:column;gap:8px}
+.oi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px}
+.oi-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.oi-id{font-size:11px;color:var(--text2)}
+.ost{font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px}
+.ost.p{background:rgba(255,167,0,.15);color:#ffa700}
+.ost.s{background:rgba(0,212,170,.15);color:var(--accent3)}
+.ost.c{background:rgba(255,77,109,.15);color:var(--accent2)}
+.oi-pr{font-size:13px;font-weight:700;margin-bottom:7px}
+.oi-ft{display:flex;justify-content:space-between;align-items:center}
+.oi-gi{font-size:11px;color:var(--text2)}
+.oi-p{font-size:14px;font-weight:900;color:var(--accent3)}
+.oi-dt{font-size:10px;color:var(--text2);margin-top:5px}
+
+/* SEARCH */
+.sbar{display:flex;align-items:center;gap:9px;background:var(--bg3);
+  border:1px solid var(--border);border-radius:11px;padding:10px 13px;margin-bottom:13px}
+.sbar input{flex:1;background:none;border:none;outline:none;color:var(--text);
+  font-size:13px;font-family:'Cairo',sans-serif;text-align:right}
+.sbar .si{color:var(--text2);font-size:16px}
+
+/* OVERLAYS */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:200;
+  display:none;align-items:flex-end;backdrop-filter:blur(5px)}
+.overlay.on{display:flex}
+.sheet{width:100%;background:var(--bg2);border-top-left-radius:22px;
+  border-top-right-radius:22px;padding:18px;animation:slideUp .3s ease;
+  max-height:88vh;overflow-y:auto}
+.sh-h{width:36px;height:4px;background:var(--border);border-radius:99px;margin:0 auto 16px}
+.sh-t{font-size:18px;font-weight:700;margin-bottom:16px}
+.pc-p{display:flex;align-items:center;gap:12px;background:var(--bg3);
+  border-radius:12px;padding:13px;margin-bottom:16px;border:1px solid var(--border)}
+.pc-p .pimg{width:52px;height:52px;border-radius:10px;object-fit:cover;background:var(--bg2);flex-shrink:0}
+.pc-p .pimg-ph{width:52px;height:52px;border-radius:10px;background:var(--bg2);
+  display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0}
+.pc-p .nm{font-size:14px;font-weight:700}
+.pc-p .pr{color:var(--accent3);font-size:16px;font-weight:900;margin-top:3px}
+.bal-row{background:var(--bg3);border-radius:11px;padding:11px 13px;margin:12px 0;font-size:12px;color:var(--text2)}
+.meth-list{display:flex;flex-direction:column;gap:8px}
+.meth{background:var(--bg3);border:1px solid var(--border);border-radius:12px;
+  padding:14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color .2s}
+.meth:active{border-color:var(--accent)}
+.meth .mico{font-size:24px}
+.meth .mn{font-size:13px;font-weight:700}
+.meth .md{font-size:11px;color:var(--text2)}
+
+/* MODAL */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:300;
+  display:none;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(6px)}
+.modal.on{display:flex}
+.mbox{width:100%;max-width:400px;background:var(--bg2);border:1px solid var(--border);
+  border-radius:20px;padding:20px;animation:fadeIn .3s ease;max-height:90vh;overflow-y:auto}
+.mtit{font-size:17px;font-weight:700;margin-bottom:16px;
+  display:flex;align-items:center;justify-content:space-between}
+.mclose{cursor:pointer;font-size:21px;color:var(--text2)}
+
+/* INFO ROWS */
+.ir{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:13px;margin-bottom:8px}
+.irl{font-size:11px;color:var(--text2);margin-bottom:4px}
+.irv{font-size:14px;font-weight:700;direction:ltr;text-align:right}
+.irv.g{color:var(--accent3)}.irv.a{color:var(--accent)}.irv.r{color:var(--accent2)}
+.edit-row{display:flex;gap:7px;margin-top:8px}
+.edit-row input{flex:1;padding:10px 12px;background:var(--bg2);border:1px solid var(--border);
+  border-radius:9px;color:var(--text);font-size:13px;font-family:'Cairo',sans-serif;outline:none;direction:ltr}
+.edit-row input:focus{border-color:var(--accent)}
+.edit-row input.ar-in{direction:rtl}
+.edit-row .sbtn{padding:10px 14px;background:var(--accent);border:none;border-radius:9px;
+  color:#fff;font-size:12px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer;white-space:nowrap}
+.edit-link{color:var(--accent);font-size:11px;cursor:pointer;margin-top:6px;display:inline-block}
+.sep{height:1px;background:var(--border);margin:12px 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+
+/* AVATAR UPLOAD */
+.av-upload{border:2px dashed var(--border);border-radius:12px;padding:20px;
+  text-align:center;cursor:pointer;margin-bottom:14px;transition:border-color .2s}
+.av-upload:hover{border-color:var(--accent)}
+.av-upload .ico{font-size:32px;display:block;margin-bottom:8px}
+.av-upload p{font-size:12px;color:var(--text2)}
+
+/* FEATURES */
+.feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.feat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center}
+.feat .fi2{font-size:24px;margin-bottom:5px}
+.feat .fn{font-size:11px;font-weight:700}
+.feat .fs{font-size:10px;color:var(--text2);margin-top:2px}
+
+/* SPINNER */
+.spin{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,.3);
+  border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* TOAST */
+.toast{position:fixed;top:18px;left:50%;
+  transform:translateX(-50%) translateY(-100px);
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:11px;padding:10px 18px;font-size:13px;font-weight:600;
+  z-index:999;transition:transform .4s cubic-bezier(.34,1.56,.64,1);
+  white-space:nowrap;max-width:90vw;overflow:hidden;text-overflow:ellipsis}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.ok{border-color:var(--accent3);color:var(--accent3)}
+.toast.er{border-color:var(--accent2);color:var(--accent2)}
+
+/* EMPTY */
+.empty{text-align:center;padding:48px 20px;color:var(--text2)}
+.empty .ico{font-size:52px;display:block;margin-bottom:13px;opacity:.3}
+.empty h3{font-size:16px;color:var(--text);margin-bottom:5px}
+.empty p{font-size:12px}
+
+/* LOADING */
+.loading{text-align:center;padding:30px;color:var(--text2);font-size:13px}
+
+@keyframes fadeIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+@keyframes loadBar{from{width:0}to{width:100%}}
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash" class="screen active">
+  <div class="sp">
+    <div class="sp-logo">
+      <img src="https://shadow-3nyz.onrender.com/logo.png"
+           onerror="this.style.display='none';this.parentElement.innerHTML='🌑'"
+           alt="Shadow Store">
+    </div>
+    <h1>SHADOW STORE</h1>
+    <p>GAMING MARKETPLACE</p>
+    <div class="sp-bar"><div class="sp-fill"></div></div>
+  </div>
+</div>
+
+<!-- AUTH -->
+<div id="auth" class="screen">
+  <div class="au">
+    <div class="au-logo">
+      <img src="https://shadow-3nyz.onrender.com/logo.png"
+           onerror="this.style.display='none'"
+           alt="Logo">
+      <h2>Shadow Store</h2>
+      <p>متجر الألعاب الرقمية</p>
+    </div>
+    <div class="au-card">
+      <div class="tabs">
+        <div class="tab on" onclick="switchTab('login')">تسجيل الدخول</div>
+        <div class="tab" onclick="switchTab('reg')">حساب جديد</div>
+      </div>
+
+      <!-- LOGIN -->
+      <div id="loginF">
+        <div class="fg">
+          <label class="fl">البريد الإلكتروني أو رقم الهاتف</label>
+          <div class="fi-w"><span class="fii">📧</span>
+            <input class="fi" type="text" id="li" placeholder="email@example.com أو 09xxxxxxxx">
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">كلمة المرور</label>
+          <div class="fi-w"><span class="fii">🔒</span>
+            <input class="fi" type="password" id="lp" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+          </div>
+        </div>
+        <div class="err" id="lerr"></div>
+        <button class="btn btn-a" id="loginBtn" style="margin-top:10px" onclick="doLogin()">تسجيل الدخول</button>
+        <div class="divider">أو</div>
+        <button class="btn btn-tg" onclick="loginViaTG()">✈️ الدخول عبر تيليغرام</button>
+      </div>
+
+      <!-- REGISTER -->
+      <div id="regF" style="display:none">
+        <div class="fg">
+          <label class="fl">الاسم الكامل <span style="color:var(--accent2)">*</span></label>
+          <input class="fi ar" type="text" id="rn" placeholder="اسمك الكامل">
+        </div>
+        <div class="fg">
+          <label class="fl">البريد الإلكتروني <span style="color:var(--accent2)">*</span></label>
+          <input class="fi" type="email" id="re" placeholder="email@example.com">
+        </div>
+        <div class="fg">
+          <label class="fl">رقم الهاتف <span style="color:var(--text2)">(اختياري)</span></label>
+          <input class="fi" type="tel" id="rph" placeholder="09xxxxxxxx">
+        </div>
+        <div class="fg">
+          <label class="fl">كلمة المرور <span style="color:var(--accent2)">*</span></label>
+          <div class="fi-w"><span class="fii">🔒</span>
+            <input class="fi" type="password" id="rp" placeholder="6 أحرف على الأقل">
+          </div>
+        </div>
+        <div class="err" id="rerr"></div>
+        <button class="btn btn-a" id="regBtn" style="margin-top:10px" onclick="doRegister()">إنشاء الحساب 🎉</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="screen">
+  <div class="header">
+    <div class="hlogo">
+      <img src="https://shadow-3nyz.onrender.com/logo.png"
+           onerror="this.innerHTML='🌑';this.style.fontSize='22px'"
+           alt="Logo">
+      <span>SHADOW<b>STORE</b></span>
+    </div>
+    <div class="hbtns">
+      <div class="hbtn" onclick="showPage('orders')">🛍️</div>
+      <div class="hbtn" onclick="showPage('wallet')">💰</div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- HOME -->
+    <div class="page on" id="pg-home">
+      <div class="hero">
+        <img class="hero-img" src="https://shadow-3nyz.onrender.com/logo.png"
+             onerror="this.style.display='none'" alt="">
+        <div class="hero-tag">⚡ متجر الألعاب الأول</div>
+        <h2>شحن <span>فوري</span><br>بأفضل الأسعار</h2>
+        <p>آلاف المنتجات للألعاب المفضلة لديك</p>
+        <div class="hero-btns">
+          <button class="hb2 pr" onclick="showPage('games')">تسوق الآن</button>
+          <button class="hb2 se" onclick="showPage('offers')">العروض ⚡</button>
+        </div>
+      </div>
+
+      <div class="wchip" id="wchip">
+        <div class="wc-av" id="wcAv"><span id="wcAvTxt">?</span></div>
+        <div style="flex:1">
+          <div class="wc-n" id="wcN">أهلاً</div>
+          <div class="wc-b">رصيدك: <span id="wcB">$0.00</span></div>
+        </div>
+        <div style="color:var(--accent);font-size:12px;cursor:pointer;font-weight:700" onclick="showPage('wallet')">إيداع ›</div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-hd"><div class="sec-t">⚡ عروض اليوم</div><div class="sec-m" onclick="showPage('offers')">الكل</div></div>
+        <div class="oscr" id="homeOff"><div style="color:var(--text2);font-size:12px;padding:14px 4px">لا توجد عروض حالياً</div></div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-hd"><div class="sec-t">🎮 الألعاب</div><div class="sec-m" onclick="showPage('games')">الكل</div></div>
+        <div class="ggrid" id="homeGames"></div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-t" style="margin-bottom:11px">✅ لماذا Shadow Store؟</div>
+        <div class="feat-grid">
+          <div class="feat"><div class="fi2">⚡</div><div class="fn">شحن فوري</div><div class="fs">خلال دقائق</div></div>
+          <div class="feat"><div class="fi2">🔒</div><div class="fn">آمن 100%</div><div class="fs">حماية كاملة</div></div>
+          <div class="feat"><div class="fi2">💰</div><div class="fn">أفضل الأسعار</div><div class="fs">ضمان السعر</div></div>
+          <div class="feat"><div class="fi2">💬</div><div class="fn">دعم 24/7</div><div class="fs">نحن هنا دائماً</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GAMES -->
+    <div class="page" id="pg-games">
+      <div class="sbar"><span class="si">🔍</span>
+        <input type="text" placeholder="ابحث عن لعبة..." oninput="filterGames(this.value)">
+      </div>
+      <div class="ggrid" id="allGames"></div>
+    </div>
+
+    <!-- OFFERS -->
+    <div class="page" id="pg-offers">
+      <div class="sec-t" style="margin-bottom:13px">⚡ العروض المحدودة</div>
+      <div class="empty"><span class="ico">⚡</span><h3>لا توجد عروض</h3><p>تابع البوت للإشعارات</p></div>
+    </div>
+
+    <!-- ORDERS -->
+    <div class="page" id="pg-orders">
+      <div class="sec-t" style="margin-bottom:13px">📋 طلباتي</div>
+      <div class="olist" id="ordersList"></div>
+    </div>
+
+    <!-- WALLET -->
+    <div class="page" id="pg-wallet">
+      <div class="wcard">
+        <div class="wlbl">رصيدك الحالي</div>
+        <div class="wamt" id="wAmt"><span>$</span>0.00</div>
+        <div class="wsyp" id="wSYP">≈ 0 ل.س</div>
+        <div class="wacts">
+          <button class="wb dep" onclick="openSheet('depSheet')">＋ إيداع</button>
+          <button class="wb hist" onclick="showPage('orders')">السجل 📋</button>
+        </div>
+      </div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:12px;text-align:center">
+        💡 لشحن الرصيد تواصل مع البوت
+        <strong style="color:var(--accent);cursor:pointer" onclick="openTG()">@Shadowstoreshbot</strong>
+      </div>
+      <div class="sec-t" style="margin-bottom:11px">💳 آخر المعاملات</div>
+      <div id="txList"></div>
+    </div>
+
+    <!-- PROFILE -->
+    <div class="page" id="pg-profile">
+      <div class="ph">
+        <div class="av" id="profAv" onclick="openAvatarSheet()">
+          <span id="profAvTxt" style="font-size:32px">?</span>
+          <div class="av-edit">📷 تغيير</div>
+        </div>
+        <div class="pn" id="profN">—</div>
+        <div class="ps" id="profS">—</div>
+        <div id="tgStatus"></div>
+        <div class="pbadge">⭐ عضو Shadow Store</div>
+      </div>
+
+      <div class="s3g">
+        <div class="s3"><div class="s3v" id="pOrds">0</div><div class="s3l">طلباتي</div></div>
+        <div class="s3"><div class="s3v" id="pBal" style="color:var(--accent3)">$0</div><div class="s3l">الرصيد</div></div>
+        <div class="s3"><div class="s3v" id="pSav" style="color:var(--gold)">$0</div><div class="s3l">وفّرت</div></div>
+      </div>
+
+      <div class="mlist">
+        <div class="mi" onclick="openAcctModal()">
+          <div class="mico">📄</div><div class="mtx"><div class="mt">بيانات الحساب</div><div class="ms">الاسم، الإيميل، الهاتف، كلمة المرور</div></div><div class="mar">›</div>
+        </div>
+        <div class="mi" onclick="showPage('wallet')">
+          <div class="mico">💰</div><div class="mtx"><div class="mt">محفظتي</div><div class="ms">الرصيد وسجل المعاملات</div></div><div class="mar">›</div>
+        </div>
+        <div class="mi" onclick="showPage('orders')">
+          <div class="mico">📋</div><div class="mtx"><div class="mt">طلباتي</div><div class="ms">جميع مشترياتك</div></div><div class="mar">›</div>
+        </div>
+        <div class="mi" onclick="linkTelegram()">
+          <div class="mico">✈️</div><div class="mtx"><div class="mt">ربط تيليغرام</div><div class="ms" id="tgLinkSub">اربط حسابك مع البوت</div></div><div class="mar">›</div>
+        </div>
+        <div class="mi" onclick="openTG()">
+          <div class="mico">💬</div><div class="mtx"><div class="mt">دعم العملاء</div><div class="ms">@Shadowstoreshbot</div></div><div class="mar">›</div>
+        </div>
+        <div class="mi dng" onclick="doLogout()">
+          <div class="mico">🚪</div><div class="mtx"><div class="mt">تسجيل الخروج</div></div><div class="mar">›</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="bnav">
+    <div class="ni on" id="ni-home" onclick="showPage('home')"><span class="ico">🏠</span><span>الرئيسية</span></div>
+    <div class="ni" id="ni-games" onclick="showPage('games')"><span class="ico">🎮</span><span>الألعاب</span></div>
+    <div class="ni" id="ni-offers" onclick="showPage('offers')"><span class="ico">⚡</span><span>العروض</span></div>
+    <div class="ni" id="ni-wallet" onclick="showPage('wallet')"><span class="ico">💰</span><span>محفظتي</span></div>
+    <div class="ni" id="ni-profile" onclick="showPage('profile')"><span class="ico">👤</span><span>حسابي</span></div>
+  </div>
+</div>
+
+<!-- GAME SHEET -->
+<div class="overlay" id="gameSheet" onclick="closeSheet('gameSheet')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sh-h"></div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <img id="gSheetImg" src="" alt="" style="width:50px;height:50px;border-radius:11px;object-fit:cover;background:var(--bg3)">
+      <div class="sh-t" id="gSheetT" style="margin-bottom:0"></div>
+    </div>
+    <div class="plist" id="gSheetProds"></div>
+  </div>
+</div>
+
+<!-- BUY SHEET -->
+<div class="overlay" id="buySheet" onclick="closeSheet('buySheet')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sh-h"></div>
+    <div class="sh-t">تأكيد الشراء</div>
+    <div class="pc-p" id="pcProd"></div>
+    <div class="fg">
+      <label class="fl">معرف اللاعب (Player ID) <span style="color:var(--accent2)">*</span></label>
+      <input class="fi" type="text" id="gidIn" placeholder="أدخل معرف حسابك في اللعبة">
+    </div>
+    <div class="fg">
+      <label class="fl">كوبون الخصم <span style="color:var(--text2)">(اختياري)</span></label>
+      <input class="fi" type="text" id="cupIn" placeholder="كود الكوبون إن وجد">
+    </div>
+    <div class="err" id="buyErr"></div>
+    <div class="bal-row">
+      💰 رصيدك: <strong id="buyBal" style="color:var(--accent3)">$0</strong>
+      &nbsp;|&nbsp; السعر: <strong id="buyPr" style="color:var(--accent2)">$0</strong>
+    </div>
+    <button class="btn btn-a" onclick="confirmBuy()">✅ تأكيد الشراء عبر البوت</button>
+  </div>
+</div>
+
+<!-- DEPOSIT SHEET -->
+<div class="overlay" id="depSheet" onclick="closeSheet('depSheet')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sh-h"></div>
+    <div class="sh-t">إيداع رصيد 💰</div>
+    <div class="meth-list">
+      <div class="meth" onclick="openTG()"><div class="mico">💳</div><div><div class="mn">شام كاش</div><div class="md">إيداع عبر تطبيق شام كاش</div></div></div>
+      <div class="meth" onclick="openTG()"><div class="mico">📞</div><div><div class="mn">سيرياتيل كاش</div><div class="md">إيداع عبر سيرياتيل كاش</div></div></div>
+    </div>
+    <p style="color:var(--text2);font-size:12px;text-align:center;margin-top:14px;line-height:1.8">
+      سيتم تحويلك لبوت تيليغرام لإتمام الإيداع<br>
+      <strong style="color:var(--accent);cursor:pointer" onclick="openTG()">@Shadowstoreshbot</strong>
+    </p>
+  </div>
+</div>
+
+<!-- AVATAR SHEET -->
+<div class="overlay" id="avSheet" onclick="closeSheet('avSheet')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sh-h"></div>
+    <div class="sh-t">صورة الحساب</div>
+    <div class="av-upload" onclick="document.getElementById('avFileIn').click()">
+      <span class="ico">📷</span>
+      <p>اضغط لاختيار صورة من جهازك</p>
+      <p style="margin-top:4px;font-size:10px;color:var(--accent)">JPG أو PNG — بحجم أقصى 2MB</p>
+      <input type="file" id="avFileIn" accept="image/*" style="display:none" onchange="handleAvatarUpload(this)">
+    </div>
+    <div style="text-align:center;margin-top:10px">
+      <div id="avPreviewWrap" style="display:none;margin-bottom:12px">
+        <img id="avPreview" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--accent)" alt="">
+      </div>
+    </div>
+    <button class="btn btn-a" id="avSaveBtn" style="display:none" onclick="saveAvatar()">💾 حفظ الصورة</button>
+  </div>
+</div>
+
+<!-- ACCOUNT MODAL -->
+<div class="modal" id="acctModal" onclick="closeAcctModal()">
+  <div class="mbox" onclick="event.stopPropagation()">
+    <div class="mtit">📄 بيانات الحساب <span class="mclose" onclick="closeAcctModal()">✕</span></div>
+    <div id="acctBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ======================================================
+// CONFIG
+// ======================================================
+const API = 'https://shadow-3nyz.onrender.com/api';
+
+// ======================================================
+// GAMES DATA (مع صور حقيقية من CDN)
+// ======================================================
+const GAMES = [
+  {id:'freefire', name:'Free Fire',      img:'https://play-lh.googleusercontent.com/WWcssdzTGmHgOeXZufMwLcNMCBFHafb7RK5EMbmKnxSzMcWc8e5yFZKmNfPwGawpqA',
+   prods:[{id:'ff1',n:'100 💎',p:1},{id:'ff2',n:'210 💎',p:2},{id:'ff3',n:'520 💎',p:5},{id:'ff4',n:'1080 💎',p:10}]},
+  {id:'pubg',     name:'PUBG Mobile',    img:'https://play-lh.googleusercontent.com/JRd05pyBH41qjgsJuWduRJpDeZG0Hnb0yjf2DqjfAe-OaS4tGCHWOFkTIFfBWQfp5g',
+   prods:[{id:'pg1',n:'60 UC',p:1},{id:'pg2',n:'180 UC',p:3},{id:'pg3',n:'325 UC',p:5},{id:'pg4',n:'660 UC',p:10}]},
+  {id:'mlbb',     name:'Mobile Legends', img:'https://play-lh.googleusercontent.com/b3BFCVNjVhv_kqQK2c-jTSIlSRshlHENMzBdWLn8KXqGBSGFp7ln0i4VKV4LVSCVyQ',
+   prods:[{id:'ml1',n:'11 💎',p:0.5},{id:'ml2',n:'56 💎',p:2},{id:'ml3',n:'172 💎',p:5},{id:'ml4',n:'257 💎',p:7}]},
+  {id:'cod',      name:'Call of Duty',   img:'https://play-lh.googleusercontent.com/5zA0hzRdMRO2k0oELi9c7OO4oZDTFKqyO5OQAnGppiHEg_TEmXyXBuEaOoVyFMCi7f8',
+   prods:[{id:'cd1',n:'80 CP',p:2},{id:'cd2',n:'400 CP',p:5},{id:'cd3',n:'800 CP',p:10}]},
+  {id:'genshin',  name:'Genshin Impact', img:'https://play-lh.googleusercontent.com/So8-z99ZRlkqYSfJIcSYHnzBhbSAuWaJ1VJlFvRSYhZvJJ0k-2lPVZVqnHlDJTKMBk8',
+   prods:[{id:'gs1',n:'60 ✦',p:1},{id:'gs2',n:'300 ✦',p:5},{id:'gs3',n:'980 ✦',p:15}]},
+  {id:'fc',       name:'FC Mobile',      img:'https://play-lh.googleusercontent.com/haZcoBMFHkTEbq5J_LFfaArXiH3eAGcGFRRUKA2FGJUkjBNXZ_l3H7gNqIjcfXJUKg',
+   prods:[{id:'fc1',n:'100 Points',p:1},{id:'fc2',n:'500 Points',p:4.5}]},
+  {id:'wildrift', name:'Wild Rift',      img:'https://play-lh.googleusercontent.com/gE5Dk4_r-eQb-nHFKCk0sHYbY1xj4QKsMcYPGZnBqssFcm7SWsXSCYrD68ikCDqPrg',
+   prods:[{id:'wr1',n:'375 Wild Cores',p:2},{id:'wr2',n:'750 Wild Cores',p:4}]},
+  {id:'jawaker',  name:'Jawaker',         img:'https://play-lh.googleusercontent.com/yJyRcqEYomjZvS4fCOOF-Pxmf3JF4k37R_dKFMiH8JKDzOxFTFtHW1RJBXM3Ru-7A',
+   prods:[{id:'jw1',n:'700 Token',p:1},{id:'jw2',n:'2000 Token',p:2.5}]},
+  {id:'hok',      name:'Honor of Kings', img:'https://play-lh.googleusercontent.com/h9XPX1Y1cGJo2GfGPcFv8EfRMlyLAHiirNONFh2iIhWVILwkOW5pnbgXN7GvQOa3TQ',
+   prods:[{id:'hk1',n:'60 💎',p:1},{id:'hk2',n:'300 💎',p:5}]},
+];
+
+// ======================================================
+// STATE
+// ======================================================
+let CU = null;   // current user object
+let TOKEN = null;
+let selProd = null;
+let avatarDataURL = null;
+
+// ======================================================
+// LOCAL STORAGE (fallback when API is offline)
+// ======================================================
+const LS = {
+  get:  k => JSON.parse(localStorage.getItem(k) || 'null'),
+  set:  (k,v) => localStorage.setItem(k, JSON.stringify(v)),
+  del:  k => localStorage.removeItem(k),
+};
+
+// ======================================================
+// API CALLS
+// ======================================================
+async function apiCall(path, method='GET', body=null, auth=true) {
+  try {
+    const headers = {'Content-Type':'application/json'};
+    if (auth && TOKEN) headers['Authorization'] = 'Bearer ' + TOKEN;
+    const opts = {method, headers};
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(API + path, opts);
+    return await r.json();
+  } catch(e) {
+    return {ok:false, error:'تعذر الاتصال بالسيرفر — وضع غير متصل'};
+  }
+}
+
+// ======================================================
+// INIT
+// ======================================================
+window.onload = () => {
+  renderGrid('homeGames', 6);
+  renderGrid('allGames', 99);
+  setTimeout(async () => {
+    TOKEN = LS.get('ss_token');
+    if (TOKEN) {
+      const res = await apiCall('/user/me');
+      if (res.ok) {
+        CU = res.user;
+        LS.set('ss_user', CU);
+        showScreen('app'); refreshUI();
+      } else {
+        // Try local fallback
+        const local = LS.get('ss_user');
+        if (local) { CU = local; showScreen('app'); refreshUI(); }
+        else showScreen('auth');
+      }
+    } else {
+      showScreen('auth');
+    }
+  }, 2500);
+};
+
+// ======================================================
+// AUTH
+// ======================================================
+function switchTab(t) {
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('on',(i===0&&t==='login')||(i===1&&t==='reg')));
+  document.getElementById('loginF').style.display = t==='login'?'block':'none';
+  document.getElementById('regF').style.display   = t==='reg'?'block':'none';
+}
+
+async function doLogin() {
+  const id=document.getElementById('li').value.trim();
+  const pw=document.getElementById('lp').value;
+  const err=document.getElementById('lerr');
+  if(!id||!pw){showErr(err,'يرجى ملء جميع الحقول');return;}
+  setBtnLoad('loginBtn', true);
+  const res = await apiCall('/auth/login', 'POST', {identifier:id, password:pw}, false);
+  setBtnLoad('loginBtn', false);
+  if(!res.ok){showErr(err, res.error||'خطأ في تسجيل الدخول');return;}
+  err.style.display='none';
+  TOKEN = res.token; CU = res.user;
+  LS.set('ss_token', TOKEN); LS.set('ss_user', CU);
+  showScreen('app'); refreshUI();
+  showToast('👋 أهلاً '+CU.name,'ok');
+}
+
+async function doRegister() {
+  const name=document.getElementById('rn').value.trim();
+  const email=document.getElementById('re').value.trim();
+  const phone=document.getElementById('rph').value.trim();
+  const pw=document.getElementById('rp').value;
+  const err=document.getElementById('rerr');
+  if(!name){showErr(err,'يرجى إدخال الاسم الكامل');return;}
+  if(!email){showErr(err,'يرجى إدخال البريد الإلكتروني');return;}
+  if(!pw||pw.length<6){showErr(err,'كلمة المرور يجب أن تكون 6 أحرف على الأقل');return;}
+  setBtnLoad('regBtn', true);
+  const res = await apiCall('/auth/register','POST',{name,email,phone,password:pw},false);
+  setBtnLoad('regBtn', false);
+  if(!res.ok){showErr(err,res.error||'خطأ في إنشاء الحساب');return;}
+  err.style.display='none';
+  TOKEN = res.token; CU = res.user;
+  LS.set('ss_token', TOKEN); LS.set('ss_user', CU);
+  showScreen('app'); refreshUI();
+  showToast('🎉 أهلاً بك '+CU.name+'!','ok');
+}
+
+function loginViaTG() {
+  // Deep link to bot with start param
+  window.open('https://t.me/Shadowstoreshbot?start=weblogin','_blank');
+  showToast('افتح البوت وأرسل /weblogin','ok');
+}
+
+function linkTelegram() {
+  window.open('https://t.me/Shadowstoreshbot?start=link','_blank');
+  showToast('افتح البوت وأرسل /link للربط','ok');
+}
+
+async function doLogout() {
+  await apiCall('/auth/logout','POST');
+  TOKEN=null; CU=null;
+  LS.del('ss_token'); LS.del('ss_user');
+  showScreen('auth');
+  showToast('👋 تم تسجيل الخروج','ok');
+}
+
+// ======================================================
+// SCREENS / PAGES
+// ======================================================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function showPage(pg) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
+  document.getElementById('pg-'+pg).classList.add('on');
+  const ni=document.getElementById('ni-'+pg); if(ni) ni.classList.add('on');
+  if(pg==='profile') renderProfile();
+  if(pg==='orders')  renderOrders();
+  if(pg==='wallet')  renderWallet();
+  if(pg==='home')    refreshUI();
+}
+
+// ======================================================
+// REFRESH UI
+// ======================================================
+function refreshUI() {
+  if(!CU) return;
+  // Avatar
+  const avEl = document.getElementById('wcAv');
+  const avTxt = document.getElementById('wcAvTxt');
+  const savedAv = LS.get('ss_avatar_'+CU.id);
+  if(CU.avatar_url || savedAv) {
+    avEl.innerHTML = `<img src="${savedAv||CU.avatar_url}" onerror="this.parentElement.innerHTML='<span>${CU.name?CU.name[0].toUpperCase():'?'}</span>'" alt="">`;
+  } else {
+    avTxt.textContent = CU.name ? CU.name[0].toUpperCase() : '?';
+  }
+  document.getElementById('wcN').textContent = 'أهلاً، ' + CU.name;
+  document.getElementById('wcB').textContent = '$' + (CU.balance||0).toFixed(2);
+}
+
+// ======================================================
+// GAMES
+// ======================================================
+function renderGrid(elId, max) {
+  const el=document.getElementById(elId);
+  el.innerHTML=GAMES.slice(0,max).map(g=>`
+    <div class="gc" onclick="openGame('${g.id}')">
+      <img class="gc-img" src="${g.img}" alt="${g.name}"
+           onerror="this.outerHTML='<div class=\\'gc-img-placeholder\\'>${getGameEmoji(g.id)}</div>'">
+      <div class="gc-info">
+        <div class="gc-n">${g.name}</div>
+        <div class="gc-p">من $${Math.min(...g.prods.map(p=>p.p)).toFixed(2)}</div>
+      </div>
+    </div>`).join('');
+}
+
+function filterGames(v) {
+  const q=v.toLowerCase();
+  document.getElementById('allGames').innerHTML=GAMES.filter(g=>g.name.toLowerCase().includes(q))
+    .map(g=>`
+      <div class="gc" onclick="openGame('${g.id}')">
+        <img class="gc-img" src="${g.img}" alt="${g.name}"
+             onerror="this.outerHTML='<div class=\\'gc-img-placeholder\\'>${getGameEmoji(g.id)}</div>'">
+        <div class="gc-info"><div class="gc-n">${g.name}</div><div class="gc-p">من $${Math.min(...g.prods.map(p=>p.p)).toFixed(2)}</div></div>
+      </div>`).join('');
+}
+
+function getGameEmoji(id) {
+  const m={freefire:'🔥',pubg:'🎯',mlbb:'⚔️',cod:'🔫',genshin:'✨',fc:'⚽',wildrift:'🌊',jawaker:'♣️',hok:'🤴'};
+  return m[id]||'🎮';
+}
+
+function openGame(gid) {
+  const g=GAMES.find(x=>x.id===gid); if(!g) return;
+  document.getElementById('gSheetImg').src = g.img;
+  document.getElementById('gSheetImg').onerror = function(){this.style.display='none'};
+  document.getElementById('gSheetT').textContent = g.name;
+  document.getElementById('gSheetProds').innerHTML=g.prods.map(p=>`
+    <div class="pi" onclick="selPr('${gid}','${p.id}')">
+      <img class="pi-img" src="${g.img}" alt="${g.name}"
+           onerror="this.outerHTML='<div class=\\'pi-img-ph\\'>${getGameEmoji(gid)}</div>'">
+      <div style="flex:1"><div class="pi-n">${p.n}</div><div class="pi-d">⚡ شحن فوري</div></div>
+      <div class="pi-p">$${p.p.toFixed(2)}</div>
+    </div>`).join('');
+  openSheet('gameSheet');
+}
+
+function selPr(gid, pid) {
+  const g=GAMES.find(x=>x.id===gid);
+  const p=g.prods.find(x=>x.id===pid);
+  selProd={...p, gameName:g.name, gameImg:g.img, gameId:gid, gameEmoji:getGameEmoji(gid)};
+  closeSheet('gameSheet');
+  document.getElementById('pcProd').innerHTML=`
+    <img class="pimg" src="${g.img}" alt="${g.name}"
+         onerror="this.outerHTML='<div class=\\'pimg-ph\\'>${getGameEmoji(gid)}</div>'">
+    <div><div class="nm">${p.n} — ${g.name}</div><div class="pr">$${p.p.toFixed(2)}</div></div>`;
+  document.getElementById('gidIn').value='';
+  document.getElementById('cupIn').value='';
+  document.getElementById('buyErr').style.display='none';
+  const bal = CU ? (CU.balance||0).toFixed(2) : '0.00';
+  document.getElementById('buyBal').textContent = '$' + bal;
+  document.getElementById('buyPr').textContent = '$' + p.p.toFixed(2);
+  openSheet('buySheet');
+}
+
+async function confirmBuy() {
+  const gid=document.getElementById('gidIn').value.trim();
+  const err=document.getElementById('buyErr');
+  if(!gid){showErr(err,'يرجى إدخال معرف اللاعب');return;}
+  if(!CU){openTG();return;}
+  if((CU.balance||0)<selProd.p){
+    showErr(err,'رصيدك غير كافٍ ($'+(CU.balance||0).toFixed(2)+'). يرجى إيداع رصيد أولاً');return;}
+  closeSheet('buySheet');
+  showToast('✅ سيتم فتح البوت لإتمام الطلب','ok');
+  setTimeout(()=>openTG(), 800);
+}
+
+// ======================================================
+// WALLET
+// ======================================================
+async function renderWallet() {
+  const res = await apiCall('/wallet');
+  const bal  = res.ok ? res.balance_usd : (CU?.balance||0);
+  const syp  = res.ok ? res.balance_syp  : (CU?.balance||0)*13000;
+  if(res.ok && CU) { CU.balance = bal; LS.set('ss_user', CU); }
+  document.getElementById('wAmt').innerHTML = '<span>$</span>' + bal.toFixed(2);
+  document.getElementById('wSYP').textContent = '≈ ' + Math.round(syp).toLocaleString('ar') + ' ل.س';
+
+  // Show orders as transactions
+  const ords = (CU?.orders||[]).slice(0,10);
+  const el = document.getElementById('txList');
+  if(!ords.length){el.innerHTML='<div class="empty" style="padding:32px 20px"><span class="ico">💸</span><h3>لا توجد معاملات</h3></div>';return;}
+  el.innerHTML = ords.map(o=>`
+    <div class="tx">
+      <div class="tx-ico minus">⬇️</div>
+      <div class="tx-inf">
+        <div class="tx-t">${o.product_name||o.product||'شراء'}</div>
+        <div class="tx-d">${fmtD(o.timestamp||o.date||'')}</div>
+      </div>
+      <div class="tx-a minus">-$${(o.price||0).toFixed(2)}</div>
+    </div>`).join('');
+}
+
+// ======================================================
+// ORDERS
+// ======================================================
+async function renderOrders() {
+  const el = document.getElementById('ordersList');
+  el.innerHTML = '<div class="loading">⏳ جاري التحميل...</div>';
+  const res = await apiCall('/orders');
+  const ords = res.ok ? res.orders : (CU?.orders||[]);
+  if(!ords.length){el.innerHTML='<div class="empty"><span class="ico">📦</span><h3>لا توجد طلبات بعد</h3><p>ابدأ بتصفح الألعاب</p></div>';return;}
+  const sm={pending:{c:'p',l:'⏳ قيد التنفيذ'},Pending:{c:'p',l:'⏳ قيد التنفيذ'},
+            shipped:{c:'s',l:'✅ تم الشحن'},Shipped:{c:'s',l:'✅ تم الشحن'},
+            cancelled:{c:'c',l:'❌ ملغي'},Cancelled:{c:'c',l:'❌ ملغي'}};
+  el.innerHTML=ords.map(o=>{
+    const st=sm[o.status]||{c:'p',l:'⏳ قيد التنفيذ'};
+    const game = GAMES.find(g=>o.product_name?.toLowerCase().includes(g.id)||o.product?.toLowerCase().includes(g.id));
+    const img = game ? `<img src="${game.img}" style="width:36px;height:36px;border-radius:8px;object-fit:cover;margin-left:8px;flex-shrink:0" onerror="this.style.display='none'" alt="">` : '';
+    return `
+    <div class="oi">
+      <div class="oi-hd"><div class="oi-id">#${(o.purchase_id||o.id||'').toString().slice(-6).toUpperCase()}</div><div class="ost ${st.c}">${st.l}</div></div>
+      <div class="oi-pr" style="display:flex;align-items:center">${img}${o.product_name||o.product||'—'}</div>
+      <div class="oi-ft"><div class="oi-gi">🎮 ${o.game_id||o.gameId||'—'}</div><div class="oi-p">$${(o.price||0).toFixed(2)}</div></div>
+      <div class="oi-dt">📅 ${fmtD(o.timestamp||o.date||'')}</div>
+    </div>`;}).join('');
+}
+
+// ======================================================
+// PROFILE
+// ======================================================
+function renderProfile() {
+  if(!CU) return;
+  const savedAv = LS.get('ss_avatar_'+CU.id);
+  const av = document.getElementById('profAv');
+  const avTxt = document.getElementById('profAvTxt');
+  if(savedAv||CU.avatar_url) {
+    avTxt.style.display='none';
+    const img = av.querySelector('img') || document.createElement('img');
+    img.src = savedAv||CU.avatar_url;
+    img.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:50%';
+    img.onerror=()=>{avTxt.style.display='';avTxt.textContent=CU.name?CU.name[0].toUpperCase():'?';};
+    if(!av.querySelector('img')) av.insertBefore(img, av.querySelector('.av-edit'));
+  } else {
+    avTxt.style.display=''; avTxt.textContent=CU.name?CU.name[0].toUpperCase():'?';
+  }
+  document.getElementById('profN').textContent = CU.name;
+  document.getElementById('profS').textContent = CU.email + (CU.phone?' | '+CU.phone:'');
+  document.getElementById('pBal').textContent  = '$'+(CU.balance||0).toFixed(2);
+  document.getElementById('pOrds').textContent = CU.orders_count||0;
+  document.getElementById('pSav').textContent  = '$0';
+
+  // TG status
+  const tgEl = document.getElementById('tgStatus');
+  const subEl = document.getElementById('tgLinkSub');
+  if(CU.telegram_id) {
+    tgEl.innerHTML = `<div class="tg-linked">✈️ مربوط بتيليغرام #${CU.telegram_id}</div>`;
+    subEl.textContent = 'الحساب مربوط بالبوت ✅';
+  } else {
+    tgEl.innerHTML='';
+    subEl.textContent = 'اربط حسابك مع البوت';
+  }
+}
+
+// ======================================================
+// ACCOUNT MODAL
+// ======================================================
+function openAcctModal() {
+  if(!CU) return;
+  const spent = (CU.orders||[]).filter(o=>['shipped','Shipped'].includes(o.status)).reduce((a,o)=>a+(o.price||0),0);
+  document.getElementById('acctBody').innerHTML=`
+    <div class="ir">
+      <div class="irl">👤 الاسم الكامل</div><div class="irv">${CU.name}</div>
+      <div class="edit-row" id="er-name" style="display:none">
+        <input type="text" class="ar-in" id="in-name" value="${CU.name}" placeholder="الاسم الجديد">
+        <button class="sbtn" onclick="saveF('name')">حفظ</button>
+      </div>
+      <span class="edit-link" onclick="togEdit('er-name')">✏️ تعديل الاسم</span>
+    </div>
+    <div class="ir">
+      <div class="irl">📧 البريد الإلكتروني</div><div class="irv">${CU.email}</div>
+      <div class="edit-row" id="er-email" style="display:none">
+        <input type="email" id="in-email" value="${CU.email}" placeholder="البريد الجديد">
+        <button class="sbtn" onclick="saveF('email')">حفظ</button>
+      </div>
+      <span class="edit-link" onclick="togEdit('er-email')">✏️ تعديل البريد</span>
+    </div>
+    <div class="ir">
+      <div class="irl">📱 رقم الهاتف</div><div class="irv">${CU.phone||'— لم يُضف بعد'}</div>
+      <div class="edit-row" id="er-phone" style="display:none">
+        <input type="tel" id="in-phone" value="${CU.phone||''}" placeholder="رقم الهاتف">
+        <button class="sbtn" onclick="saveF('phone')">حفظ</button>
+      </div>
+      <span class="edit-link" onclick="togEdit('er-phone')">✏️ ${CU.phone?'تعديل الرقم':'إضافة رقم'}</span>
+    </div>
+    <div class="ir">
+      <div class="irl">🔒 كلمة المرور</div><div class="irv">••••••••</div>
+      <div class="edit-row" id="er-password" style="display:none">
+        <input type="password" id="in-password" placeholder="كلمة المرور الجديدة">
+        <button class="sbtn" onclick="saveF('password')">حفظ</button>
+      </div>
+      <span class="edit-link" onclick="togEdit('er-password')">🔑 تغيير كلمة المرور</span>
+    </div>
+    <div class="sep"></div>
+    <div class="grid2">
+      <div class="ir" style="margin-bottom:0"><div class="irl">💰 الرصيد</div><div class="irv g">$${(CU.balance||0).toFixed(2)}</div></div>
+      <div class="ir" style="margin-bottom:0"><div class="irl">📋 الطلبات</div><div class="irv a">${CU.orders_count||0}</div></div>
+      <div class="ir" style="margin-bottom:0"><div class="irl">💸 الإنفاق</div><div class="irv r">$${spent.toFixed(2)}</div></div>
+      <div class="ir" style="margin-bottom:0"><div class="irl">✅ مكتملة</div><div class="irv g">${(CU.orders||[]).filter(o=>['shipped','Shipped'].includes(o.status)).length}</div></div>
+    </div>
+    <div class="sep"></div>
+    <div class="ir"><div class="irl">📅 تاريخ التسجيل</div><div class="irv">${fmtD(CU.created_at||'')}</div></div>
+    <div class="ir"><div class="irl">🆔 معرف الحساب</div><div class="irv" style="font-size:11px;color:var(--text2)">${CU.id}</div></div>
+    ${CU.telegram_id?`<div class="ir"><div class="irl">✈️ تيليغرام</div><div class="irv" style="color:#0af">مربوط #${CU.telegram_id}</div></div>`:''}
+  `;
+  document.getElementById('acctModal').classList.add('on');
+}
+function closeAcctModal() { document.getElementById('acctModal').classList.remove('on'); }
+
+function togEdit(id) {
+  const r=document.getElementById(id);
+  r.style.display=r.style.display==='none'?'flex':'none';
+}
+
+async function saveF(field) {
+  const map={name:'in-name',email:'in-email',phone:'in-phone',password:'in-password'};
+  const val=document.getElementById(map[field]).value.trim();
+  if(field!=='phone'&&!val){showToast('❌ الحقل فارغ','er');return;}
+  if(field==='password'&&val&&val.length<6){showToast('❌ كلمة المرور قصيرة','er');return;}
+  const body={}; if(val) body[field]=val;
+  const res = await apiCall('/user/update','POST',body);
+  if(!res.ok){showToast('❌ '+res.error,'er');return;}
+  CU = res.user; LS.set('ss_user',CU);
+  closeAcctModal(); renderProfile(); refreshUI();
+  showToast('✅ تم الحفظ بنجاح','ok');
+}
+
+// ======================================================
+// AVATAR
+// ======================================================
+function openAvatarSheet() { openSheet('avSheet'); }
+
+function handleAvatarUpload(input) {
+  const file = input.files[0];
+  if(!file) return;
+  if(file.size > 2*1024*1024){showToast('❌ الصورة كبيرة جداً (أقصى 2MB)','er');return;}
+  const reader = new FileReader();
+  reader.onload = e => {
+    avatarDataURL = e.target.result;
+    document.getElementById('avPreview').src = avatarDataURL;
+    document.getElementById('avPreviewWrap').style.display='block';
+    document.getElementById('avSaveBtn').style.display='block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveAvatar() {
+  if(!avatarDataURL||!CU) return;
+  LS.set('ss_avatar_'+CU.id, avatarDataURL);
+  closeSheet('avSheet');
+  renderProfile(); refreshUI();
+  showToast('✅ تم حفظ الصورة','ok');
+  avatarDataURL=null;
+  document.getElementById('avPreviewWrap').style.display='none';
+  document.getElementById('avSaveBtn').style.display='none';
+}
+
+// ======================================================
+// UTILS
+// ======================================================
+function openSheet(id)  { document.getElementById(id).classList.add('on'); }
+function closeSheet(id) { document.getElementById(id).classList.remove('on'); }
+function openTG()       { window.open('https://t.me/Shadowstoreshbot','_blank'); }
+
+function setBtnLoad(id, loading) {
+  const b = document.getElementById(id);
+  if(!b) return;
+  b.disabled = loading;
+  b.innerHTML = loading ? '<span class="spin"></span>' : (id==='loginBtn'?'تسجيل الدخول':'إنشاء الحساب 🎉');
+}
+
+function showErr(el,msg) { el.textContent='❌ '+msg; el.style.display='block'; }
+
+function showToast(msg,type='') {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast '+type;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3200);
+}
+
+function fmtD(iso) {
+  try{
+    if(!iso) return '—';
+    return new Date(iso).toLocaleDateString('ar-SY',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  }catch{return iso;}
+}
+</script>
+</body>
+</html>

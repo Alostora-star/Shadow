@@ -7,7 +7,7 @@ import hashlib
 import secrets
 import json
 from datetime import datetime, timedelta
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 from config import DATABASE_NAME, BOT_TOKEN, ADMIN_USER_ID
 
@@ -337,6 +337,22 @@ def products():
     except:
         return jsonify({"ok": True, "products": []})
 
+
+# ===== SERVE STORE WEBSITE =====
+
+@app.route("/", methods=["GET"])
+def index():
+    """الصفحة الرئيسية — يعرض متجر الزبائن"""
+    for path in ["index.html", "store-customer.html"]:
+        if os.path.exists(path):
+            return send_file(path)
+    return """
+    <html dir='rtl'><body style='font-family:Arial;text-align:center;padding:50px;background:#070810;color:#fff'>
+    <h1>🌑 Shadow Store</h1>
+    <p style='color:#8b8fa8'>الموقع قيد الإعداد — البوت يعمل بشكل طبيعي</p>
+    <a href='https://t.me/Shadowstoreshbot' style='color:#1a8cff'>@Shadowstoreshbot ✈️</a>
+    </body></html>
+    """, 200
 
 # ===== HEALTH =====
 
