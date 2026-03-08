@@ -2109,7 +2109,7 @@ async def show_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         f"{t(lang,'settings_name', name=escape_html(username))}\n"
         f"{t(lang,'settings_balance', balance=balance_line)}\n"
         f"{t(lang,'settings_currency', currency=currency_flag)}\n"
-        f"{t(lang,'settings_rate', rate=f"{rate:,.0f}")}\n"
+        f"{t(lang,'settings_rate', rate=f'{rate:,.0f}')}\n"
         f"{t(lang,'settings_2fa', status=fa_status)}\n"
     )
     keyboard = [
@@ -2896,7 +2896,7 @@ async def reorder(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     wallet = await get_user_wallet(user_id)
 
     if wallet < price:
-        await update.callback_query.answer(t(lang,'wallet_insufficient', price=f"${price:.2f}", balance=f"${wallet:.2f}"), show_alert=True)
+        await update.callback_query.answer(t(lang,'wallet_insufficient', price=f'${price:.2f}', balance=f'${wallet:.2f}'), show_alert=True)
         return
 
     context.user_data['purchase_product_name'] = purchase['product_name']
@@ -2931,7 +2931,7 @@ async def cart_checkout(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     if wallet < total:
         shortage = total - wallet
         await update.callback_query.answer(
-            t(lang,'wallet_insufficient', price=f"${total:.2f}", balance=f"${wallet:.2f}"),
+            t(lang,'wallet_insufficient', price=f'${total:.2f}', balance=f'${wallet:.2f}'),
             show_alert=True
         )
         return
